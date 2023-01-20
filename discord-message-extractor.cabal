@@ -59,7 +59,10 @@ executable discord-message-extractor
     -- other-extensions:
 
     -- Other library packages from which modules are imported.
-    build-depends:    base ^>=4.16.4.0
+    build-depends:   
+        base ^>=4.16.4.0,
+        string-interpolate ^>=0.3,
+        text ^>= 1.2.5.0
 
     -- Directories containing source files.
     hs-source-dirs:   app
