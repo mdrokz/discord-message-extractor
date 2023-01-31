@@ -53,7 +53,8 @@ executable discord-message-extractor
     main-is:          Main.hs
 
     -- Modules included in this executable, other than Main.
-    -- other-modules:
+    other-modules:
+        Discord
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
@@ -61,8 +62,11 @@ executable discord-message-extractor
     -- Other library packages from which modules are imported.
     build-depends:   
         base ^>=4.16.4.0,
+        time ^>= 1.11.1.1, 
+        --time ^= 1.11.1.1,
         string-interpolate ^>=0.3,
-        text ^>= 1.2.5.0
+        text ^>= 1.2.5.0,
+        aeson ^>= 2.1.1.0
 
     -- Directories containing source files.
     hs-source-dirs:   app
