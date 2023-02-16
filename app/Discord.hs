@@ -113,7 +113,7 @@ instance ToJSON Embed where
   toJSON = genericToJSON defaultOptions
 
 data Discord = Discord
-  { id :: String,
+  { uId :: String,
     messageType :: Int,
     content :: String,
     channelId :: String,
@@ -154,7 +154,8 @@ instance ToJSON Discord where
   toJSON = genericToJSON defaultOptions
 
 data SimplifiedData = SimplifiedData
-  { sAuthor :: Maybe EmbedData,
+  { sId :: String,
+    sAuthor :: Maybe EmbedData,
     sContent :: String,
     sDescription :: Maybe String,
     sEmbed :: String,
@@ -165,9 +166,10 @@ data SimplifiedData = SimplifiedData
   deriving (Show, Generic)
 
 instance ToJSON SimplifiedData where
-  toJSON (SimplifiedData a c d e t th ts) =
+  toJSON (SimplifiedData i a c d e t th ts) =
     object
-      [ "author" .= a,
+      [ "id" .= i,
+        "author" .= a,
         "content" .= c,
         "description" .= d,
         "type" .= e,
@@ -176,13 +178,24 @@ instance ToJSON SimplifiedData where
         "timestamp" .= ts
       ]
 
-
-toSimplifiedData discord = SimplifiedData
-                { sAuthor = (embedAuthor . Prelude.head . embeds) discord,
-                  sContent = content discord,
-                  sDescription = (description . Prelude.head . embeds) discord,
-                  sEmbed = (embedType . Prelude.head . embeds) discord,
-                  sTitle = (title . Prelude.head . embeds) discord,
-                  sThumbnail = maybe "" mediaUrl ((thumbnail . Prelude.head . embeds) discord),
-                  sTimestamp = timestamp discord
-                }
+toSimplifiedData discord =
+  SimplifiedData
+    { sId = uId discord,
+      sAuthor = case embeds discord of
+        [] -> Nothing
+        x -> (embedAuthor . Prelude.head) x,
+      sContent = content discord,
+      sDescription = case embeds discord of
+        [] -> Nothing
+        x -> (description . Prelude.head) x,
+      sEmbed = case embeds discord of
+        [] -> ""
+        x -> (embedType . Prelude.head) x,
+      sTitle = case embeds discord of
+        [] -> ""
+        x -> (title . Prelude.head) x,
+      sThumbnail = case embeds discord of
+        [] -> ""
+        x -> maybe "" mediaUrl ((thumbnail . Prelude.head) x),
+      sTimestamp = timestamp discord
+    }
