@@ -10,6 +10,7 @@ module Main where
 
 -- Date Imports
 
+import Control.Concurrent
 import Control.Concurrent.Async (mapConcurrently)
 import Control.Lens
 import Control.Monad
@@ -41,6 +42,25 @@ fetchData token url = do
   let opts = defaults & header "Authorization" .~ [stringToBS token]
   asJSON =<< getWith opts url :: IO DiscordRes
 
+-- processChunks :: [String] -> [Discord] -> ([String] -> IO [Discord]) -> IO [Discord]
+-- processChunks [] [] _ = pure []
+-- processChunks xs k t = do
+--   case xs of
+--     [] -> pure k
+--     xs -> do
+--       l <- t xs
+--       processChunks (Prelude.drop 10 xs) l t
+
+processChunks xs acc n lm t
+  | n == 0 = pure acc
+  | otherwise = do
+      print n
+      threadDelay 100000
+      let l = Prelude.take 10 xs
+      let remainingXs = Prelude.drop 10 xs
+      (processedChunks, lastMessage) <- t l lm
+      processChunks remainingXs (acc <> processedChunks) (n - 1) lastMessage t
+
 processData token ul = do
   case ul of
     (x : xs) -> do
@@ -52,23 +72,40 @@ processData token ul = do
 
       let lastMessage = sId $ Prelude.last simplifiedDatas
 
-      processedDatas <- mapConcurrently (process token lastMessage) xs
+      let limit = div (Prelude.length xs) 10
 
-      let t = d <> Prelude.concat processedDatas
+      processedDatas <- case limit of
+        k | k > 3 -> do
+          processChunks xs [] limit lastMessage $ \xxs s ->
+            do
+              (dl, id) <- process token s xxs []
+              pure (dl, id)
+        _ -> do
+          (dl, _) <- process token lastMessage xs []
+          pure dl
+
+      -- processedDatas <- mapConcurrently (process token lastMessage) xs
+
+      let t = d <> processedDatas
 
       pure $ fmap toSimplifiedData t
+  where
+    process token id xs dl = do
+      case xs of
+        [] -> pure (dl, id)
+        (x : xs) -> do
+          print id
+          r <- fetchData token $ x ++ "&before=" ++ id
+          let d = r ^. responseBody
+          case d of
+            [] -> pure (dl, id)
+            ld -> process token (uId $ Prelude.last ld) xs (dl <> ld)
 
-  where 
-      process token id url = do
-        r <- fetchData token $ url ++ "&before=" ++ id
-        let d = r ^. responseBody
-        pure d
 main :: IO ()
 main =
   getArgs >>= \case
     ["help"] -> putStrLn help
     ["run", "--token", t, "--channel", c, "--limit", l] -> do
-    
       let lim = read l :: Int
 
       let messageLimit = div lim 100
@@ -82,7 +119,6 @@ main =
       let r = LBS.toStrict $ encode p
 
       BStr.writeFile "data.json" r
-
     ["version"] -> putStrLn version
     _ -> do
       putStrLn "Enter a valid command!"
