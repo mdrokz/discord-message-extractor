@@ -7,6 +7,7 @@ import Control.Lens (without)
 import Data.Aeson
 import Data.String
 import GHC.Generics
+import qualified Data.Maybe
 
 data Author = Author
   { authorId :: String,
@@ -74,7 +75,7 @@ instance ToJSON Media where
 data Embed = Embed
   { embedType :: String,
     embedUrl :: String,
-    title :: String,
+    title :: Maybe String,
     description :: Maybe String,
     color :: Maybe Int,
     embedAuthor :: Maybe EmbedData,
@@ -92,7 +93,7 @@ instance FromJSON Embed where
       <*> v
       .: "url"
       <*> v
-      .: "title"
+      .:? "title"
       <*> v
       .:? "description"
       <*> v
@@ -112,13 +113,34 @@ instance FromJSON Embed where
 instance ToJSON Embed where
   toJSON = genericToJSON defaultOptions
 
+data Attachment = Attachments
+  { fId :: String,
+    filename :: String,
+    fDescription :: Maybe String
+  }
+  deriving (Show, Generic)
+
+
+instance FromJSON Attachment where
+  parseJSON = withObject "Attachment" $ \v ->
+    Attachments
+      <$> v
+      .: "id"
+      <*> v
+      .: "filename"
+      <*> v
+      .:? "description"
+instance ToJSON Attachment where
+  toJSON = genericToJSON defaultOptions
+
+
 data Discord = Discord
   { uId :: String,
     messageType :: Int,
     content :: String,
     channelId :: String,
     author :: Author,
-    attachments :: [String],
+    attachments :: [Attachment],
     embeds :: [Embed],
     pinned :: Bool,
     tts :: Bool,
@@ -193,7 +215,7 @@ toSimplifiedData discord =
         x -> (embedType . Prelude.head) x,
       sTitle = case embeds discord of
         [] -> ""
-        x -> (title . Prelude.head) x,
+        x -> Data.Maybe.fromMaybe "" ((title . head) x),
       sThumbnail = case embeds discord of
         [] -> ""
         x -> maybe "" mediaUrl ((thumbnail . Prelude.head) x),
