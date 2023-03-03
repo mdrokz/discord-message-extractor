@@ -88,7 +88,8 @@ processData token ul = do
 
       let t = d <> processedDatas
 
-      pure $ fmap toSimplifiedData t
+      -- pure $ fmap toSimplifiedData t
+      pure t
   where
     process token id xs dl = do
       case xs of
